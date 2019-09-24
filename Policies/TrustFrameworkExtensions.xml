@@ -1,0 +1,182 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<TrustFrameworkPolicy 
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+  xmlns:xsd="http://www.w3.org/2001/XMLSchema" 
+  xmlns="http://schemas.microsoft.com/online/cpim/schemas/2013/06" 
+  PolicySchemaVersion="0.3.0.0" 
+  TenantId="mrochonb2cprod.onmicrosoft.com" 
+  PolicyId="B2C_1A_MTExtensions" 
+  PublicPolicyUri="http://mrochonb2cprod.onmicrosoft.com/B2C_1A_MTExtensions">
+  
+  <BasePolicy>
+    <TenantId>mrochonb2cprod.onmicrosoft.com</TenantId>
+    <PolicyId>B2C_1A_MTBase</PolicyId>
+  </BasePolicy>
+  <BuildingBlocks>
+    <ClaimsSchema>
+      <ClaimType Id="appTenantName">
+        <DisplayName>Tenant Name</DisplayName>
+        <DataType>string</DataType>
+        <UserHelpText>Name of the tenant.</UserHelpText>
+        <UserInputType>TextBox</UserInputType>
+        <Restriction>
+          <Pattern RegularExpression="^[a-zA-Z_$][a-zA-Z_$0-9]*$" HelpText="Please enter a valid tenant name." />
+        </Restriction>        
+      </ClaimType>
+      <ClaimType Id="appTenantDescription">
+        <DisplayName>Tenant description</DisplayName>
+        <DataType>string</DataType>
+        <UserHelpText>Description of the tenant.</UserHelpText>
+        <UserInputType>TextBox</UserInputType>
+      </ClaimType>  
+      <ClaimType Id="appTenantId">
+        <DisplayName>Application tenant id</DisplayName>
+        <DataType>string</DataType>
+        <UserHelpText>Id of the application tenant.</UserHelpText>
+        <UserInputType>Readonly</UserInputType>
+      </ClaimType>           
+    </ClaimsSchema>
+
+  </BuildingBlocks>
+
+  <ClaimsProviders>
+
+
+    <ClaimsProvider>
+      <DisplayName>Local Account SignIn</DisplayName>    
+      <TechnicalProfiles>
+        <TechnicalProfile Id="login-NonInteractive">
+          <Metadata>
+            <Item Key="client_id">c805c589-d4e2-43bd-bd75-e1e88df44d2c</Item>
+            <Item Key="IdTokenAudience">221dfbdb-064b-4747-a7db-a2b7e9d8865a</Item>
+          </Metadata>
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="client_id" DefaultValue="c805c589-d4e2-43bd-bd75-e1e88df44d2c" />
+            <InputClaim ClaimTypeReferenceId="resource_id" PartnerClaimType="resource" DefaultValue="221dfbdb-064b-4747-a7db-a2b7e9d8865a" />
+          </InputClaims>
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>
+
+    <ClaimsProvider>
+      <DisplayName>Azure Active Directory</DisplayName>    
+      <TechnicalProfiles>
+        <TechnicalProfile Id="AAD-Common">
+          <Metadata>
+            <Item Key="ApplicationObjectId">20d75341-a1e5-4ea8-a88f-7e7dfe90b9d8</Item>
+            <Item Key="ClientId">0428f335-4957-491e-96bb-7ce51b81d46a</Item>
+          </Metadata>
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>
+ 
+
+    <ClaimsProvider>
+      <DisplayName>Local Account</DisplayName>
+      <TechnicalProfiles>
+
+        <TechnicalProfile Id="NewTenantData">
+          <DisplayName>Tenant definition</DisplayName>
+          <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.SelfAssertedAttributeProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <Metadata>
+            <Item Key="IpAddressClaimReferenceId">IpAddress</Item>
+            <Item Key="ContentDefinitionReferenceId">api.localaccountsignup</Item>
+            <Item Key="language.button_continue">Create</Item>
+          </Metadata>
+          <CryptographicKeys>
+            <Key Id="issuer_secret" StorageReferenceId="B2C_1A_TokenSigningKeyContainer" />
+          </CryptographicKeys>
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="appTenantName" />
+          </InputClaims>
+          <OutputClaims>
+            <OutputClaim ClaimTypeReferenceId="appTenantName" Required="true"/>
+            <OutputClaim ClaimTypeReferenceId="appTenantDescription" />
+            <OutputClaim ClaimTypeReferenceId="appTenantId" />
+          </OutputClaims>
+          <ValidationTechnicalProfiles>
+            <ValidationTechnicalProfile ReferenceId="REST-CreateTenant" />
+          </ValidationTechnicalProfiles>
+          <UseTechnicalProfileForSessionManagement ReferenceId="SM-AAD" />
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>   
+
+    <ClaimsProvider>
+      <DisplayName>Custom REST API</DisplayName>
+      <TechnicalProfiles>
+        <TechnicalProfile Id="REST-CreateTenant">
+          <DisplayName>Create a new tenant</DisplayName>
+          <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <Metadata>
+            <Item Key="ServiceUrl">https://createtenant.com</Item>
+            <Item Key="AuthenticationType">None</Item>
+            <Item Key="SendClaimsIn">Body</Item>
+            <Item Key="AllowInsecureAuthInProduction">true</Item>            
+          </Metadata>
+          <!--CryptographicKeys>
+            <Key Id="BasicAuthenticationUsername" StorageReferenceId="B2C_1A_B2cRestClientId" />
+            <Key Id="BasicAuthenticationPassword" StorageReferenceId="B2C_1A_B2cRestClientSecret" />
+          </CryptographicKeys-->
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="appTenantName" PartnerClaimType="Name" />
+            <InputClaim ClaimTypeReferenceId="appTenantDescription" PartnerClaimType="Description" />
+            <InputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="UserObjectId" />
+          </InputClaims>
+          <OutputClaims>
+            <OutputClaim ClaimTypeReferenceId="appTenantId" PartnerClaimType="Id" />
+          </OutputClaims>
+          <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
+        </TechnicalProfile>
+      </TechnicalProfiles>
+    </ClaimsProvider>
+
+  </ClaimsProviders>
+
+  <UserJourneys>
+    <UserJourney Id="NewTenantSusi">
+      <OrchestrationSteps>
+   
+        <OrchestrationStep Order="1" Type="CombinedSignInAndSignUp" ContentDefinitionReferenceId="api.signuporsignin">
+          <ClaimsProviderSelections>
+            <ClaimsProviderSelection ValidationClaimsExchangeId="LocalAccountSigninEmailExchange" />
+          </ClaimsProviderSelections>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="LocalAccountSigninEmailExchange" TechnicalProfileReferenceId="SelfAsserted-LocalAccountSignin-Email" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <OrchestrationStep Order="2" Type="ClaimsExchange">
+          <Preconditions>
+            <Precondition Type="ClaimsExist" ExecuteActionsIf="true">
+              <Value>objectId</Value>
+              <Action>SkipThisOrchestrationStep</Action>
+            </Precondition>
+          </Preconditions>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="SignUpWithLogonEmailExchange" TechnicalProfileReferenceId="LocalAccountSignUpWithLogonEmail" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <!-- This step reads any user attributes that we may not have received when in the token. -->
+        <OrchestrationStep Order="3" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="AADUserReadWithObjectId" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <OrchestrationStep Order="4" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="NewTenantData" TechnicalProfileReferenceId="NewTenantData" />
+          </ClaimsExchanges>
+        </OrchestrationStep>      
+ 
+        <OrchestrationStep Order="5" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+    
+      </OrchestrationSteps>
+      <ClientDefinition ReferenceId="DefaultWeb" />
+    </UserJourney>  
+	
+	</UserJourneys>
+
+</TrustFrameworkPolicy>
