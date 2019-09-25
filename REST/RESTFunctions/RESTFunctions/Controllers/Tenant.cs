@@ -133,17 +133,22 @@ namespace RESTFunctions.Controllers
         }
 
         [HttpPut("{tenantId}")]
-        public async Task<IActionResult> AddMember(Guid tenantId, Guid userId)
+        public async Task<IActionResult> AddMember(Guid tenantId, Guid userId, bool isAdmin = false)
         {
             var http = await _graph.GetClientAsync();
-            var resp = await http.PostAsync(
-                $"{Graph.BaseUrl}groups/{tenantId}/members/$ref",
-                new StringContent(
-                    $"{{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/{userId}\"}}}",
-                    System.Text.Encoding.UTF8,
-                    "application/json"));
-            if (!resp.IsSuccessStatusCode)
-                return BadRequest("Add member failed");
+            var refs = new List<string>() { "members" };
+            if (isAdmin) refs.Add("owners");
+            foreach (var refType in refs)
+            {
+                var resp = await http.PostAsync(
+                    $"{Graph.BaseUrl}groups/{tenantId}/{refType}/$ref",
+                    new StringContent(
+                        $"{{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/{userId}\"}}",
+                        System.Text.Encoding.UTF8,
+                        "application/json"));
+                if (!resp.IsSuccessStatusCode)
+                    return BadRequest("Add member failed");
+            }
             return new OkResult();
         }
     }
