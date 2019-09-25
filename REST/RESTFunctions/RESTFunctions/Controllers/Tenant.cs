@@ -74,13 +74,15 @@ namespace RESTFunctions.Controllers
                 description = tenant.Description,
                 mailNickname = tenant.Name,
                 displayName = tenant.Name,
-                groupTypes = new string[] { "unified" },
+                groupTypes = new string[] { },
                 mailEnabled = false,
                 securityEnabled = true,
             };
+            // add user who created this group as both owner and member
             var jGroup = JObject.FromObject(group);
             var owners = new string[] { $"{Graph.BaseUrl}users/{tenant.UserObjectId}" };
             jGroup.Add("owners@odata.bind", JArray.FromObject(owners));
+            jGroup.Add("members@odata.bind", JArray.FromObject(owners));
             //  https://docs.microsoft.com/en-us/graph/api/group-post-groups?view=graph-rest-1.0&tabs=http
             resp = await http.PostAsync(
                 $"{Graph.BaseUrl}groups",
@@ -93,6 +95,42 @@ namespace RESTFunctions.Controllers
             // add this group to the user's tenant collection
             return new OkObjectResult(new { Id = id });
         }
+
+        [HttpGet("forUser")]
+        public async Task<IActionResult> GetForUser(string userId)
+        {
+            if ((string.IsNullOrEmpty(userId) || (string.IsNullOrEmpty(userId))))
+                return BadRequest("Invalid parameters");
+
+            var http = await _graph.GetClientAsync();
+            // does the user exist?
+            Guid guid;
+            if (!Guid.TryParse(userId, out guid))
+                return BadRequest("Invalid user id");
+            try
+            {
+                var json = await http.GetStringAsync($"{Graph.BaseUrl}users/{userId}/memberOf");
+                var groups = JObject.Parse(json)["value"].Value<JArray>();
+                var membership = new List<Member>();
+                foreach(var group in groups)
+                {
+                    var id = group["id"].Value<string>();
+                    json = await http.GetStringAsync($"{Graph.BaseUrl}groups/{id}/owners");
+                    var values = JObject.Parse(json)["value"].Value<JArray>();
+                    var admin = values.FirstOrDefault(u => u["id"].Value<string>() == userId);
+                    membership.Add(new Member
+                    {
+                        GroupId = group["id"].Value<string>(),
+                        IsAdmin = admin != null
+                    });
+                }
+                return new JsonResult(membership);
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest("Unable to validate user id");
+            }
+        }
     }
 
     public class TenantDef
@@ -100,5 +138,10 @@ namespace RESTFunctions.Controllers
         public string Name { get; set; }
         public string Description { get; set; }
         public string UserObjectId { get; set; }
+    }
+    public class Member
+    {
+        public string GroupId;
+        public bool IsAdmin;
     }
 }
