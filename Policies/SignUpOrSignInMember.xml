@@ -5,8 +5,8 @@
   xmlns="http://schemas.microsoft.com/online/cpim/schemas/2013/06"
   PolicySchemaVersion="0.3.0.0"
   TenantId="mrochonb2cprod.onmicrosoft.com"
-  PolicyId="B2C_1A_MTSignIn"
-  PublicPolicyUri="http://mrochonb2cprod.onmicrosoft.com/B2C_1A_MTSignIn">
+  PolicyId="B2C_1A_MTSignUpOrSignInMember"
+  PublicPolicyUri="http://mrochonb2cprod.onmicrosoft.com/B2C_1A_MTSignUpOrSignInMember">
 
   <BasePolicy>
     <TenantId>mrochonb2cprod.onmicrosoft.com</TenantId>
@@ -14,7 +14,7 @@
   </BasePolicy>
 
   <RelyingParty>
-    <DefaultUserJourney ReferenceId="SignIn" />
+    <DefaultUserJourney ReferenceId="SignUpOrSignInMember" />
     <TechnicalProfile Id="PolicyProfile">
       <DisplayName>PolicyProfile</DisplayName>
       <Protocol Name="OpenIdConnect" />
@@ -25,7 +25,6 @@
         <OutputClaim ClaimTypeReferenceId="email" />
         <OutputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="sub"/>
         <OutputClaim ClaimTypeReferenceId="tenantId" AlwaysUseDefaultValue="true" DefaultValue="{Policy:TenantObjectId}" />
-        <OutputClaim ClaimTypeReferenceId="appTenantName" />
         <OutputClaim ClaimTypeReferenceId="appTenantId" />  
         <OutputClaim ClaimTypeReferenceId="appTenantRole" />      
       </OutputClaims>
