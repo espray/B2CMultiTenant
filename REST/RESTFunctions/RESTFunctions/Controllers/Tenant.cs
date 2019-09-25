@@ -36,7 +36,7 @@ namespace RESTFunctions.Controllers
                     Name = result["displayName"].Value<string>(),
                     Description = result["description"].Value<string>()
                 });
-            } catch(HttpRequestException)
+            } catch (HttpRequestException)
             {
                 return NotFound();
             }
@@ -57,7 +57,7 @@ namespace RESTFunctions.Controllers
             try
             {
                 await http.GetStringAsync($"{Graph.BaseUrl}users/{tenant.UserObjectId}");
-            } catch(HttpRequestException ex)
+            } catch (HttpRequestException ex)
             {
                 return BadRequest("Unable to validate user id");
             }
@@ -112,7 +112,7 @@ namespace RESTFunctions.Controllers
                 var json = await http.GetStringAsync($"{Graph.BaseUrl}users/{userId}/memberOf");
                 var groups = JObject.Parse(json)["value"].Value<JArray>();
                 var membership = new List<Member>();
-                foreach(var group in groups)
+                foreach (var group in groups)
                 {
                     var id = group["id"].Value<string>();
                     json = await http.GetStringAsync($"{Graph.BaseUrl}groups/{id}/owners");
@@ -130,6 +130,21 @@ namespace RESTFunctions.Controllers
             {
                 return BadRequest("Unable to validate user id");
             }
+        }
+
+        [HttpPut("{tenantId}")]
+        public async Task<IActionResult> AddMember(Guid tenantId, Guid userId)
+        {
+            var http = await _graph.GetClientAsync();
+            var resp = await http.PostAsync(
+                $"{Graph.BaseUrl}groups/{tenantId}/members/$ref",
+                new StringContent(
+                    $"{{\"@odata.id\": \"https://graph.microsoft.com/v1.0/directoryObjects/{userId}\"}}}",
+                    System.Text.Encoding.UTF8,
+                    "application/json"));
+            if (!resp.IsSuccessStatusCode)
+                return BadRequest("Add member failed");
+            return new OkResult();
         }
     }
 
