@@ -132,32 +132,33 @@ namespace RESTFunctions.Controllers
             }
         }
 
-        [HttpGet("{tenantCode}/userRole")]
-        public async Task<IActionResult> GetUserRole(string tenantName, Guid userId)
+        [HttpGet("getUserRole")]
+        public async Task<IActionResult> GetUserRole(TenantDef tenant)
         {
             var http = await _graph.GetClientAsync();
             try
             {
-                var json = await http.GetStringAsync($"{Graph.BaseUrl}groups?$filter=(mailNickName eq {tenantName})");
+                var json = await http.GetStringAsync($"{Graph.BaseUrl}groups?$filter=(mailNickName eq {tenant.Name})");
                 var tenants = JObject.Parse(json)["value"].Value<JArray>();
                 string role = null;
+                string tenantId = null;
                 if (tenants.Count == 1)
                 {
-                    var tenantId = tenants[0]["id"].Value<string>();
+                    tenantId = tenants[0]["id"].Value<string>();
                     json = await http.GetStringAsync($"{Graph.BaseUrl}groups/{tenantId}/owners");
                     var members = JObject.Parse(json)["value"].Value<JArray>();
-                    var member = members.FirstOrDefault(m => m["id"].Value<string>() == userId.ToString());
+                    var member = members.FirstOrDefault(m => m["id"].Value<string>() == tenant.UserObjectId.ToString());
                     if (member != null)
                         role = "owner";
                     else
                     {
                         json = await http.GetStringAsync($"{Graph.BaseUrl}groups/{tenantId}/members");
                         members = JObject.Parse(json)["value"].Value<JArray>();
-                        member = members.FirstOrDefault(m => m["id"].Value<string>() == userId.ToString());
+                        member = members.FirstOrDefault(m => m["id"].Value<string>() == tenant.UserObjectId.ToString());
                         if (member != null) role = "member";
                     }
                 }
-                return new JsonResult(new { role });
+                return new JsonResult(new { tenantId, role });
             }
             catch (HttpRequestException ex)
             {

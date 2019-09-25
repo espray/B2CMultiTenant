@@ -34,7 +34,13 @@
         <DataType>string</DataType>
         <UserHelpText>Id of the application tenant.</UserHelpText>
         <UserInputType>Readonly</UserInputType>
-      </ClaimType>           
+      </ClaimType>   
+      <ClaimType Id="appTenantRole">
+        <DisplayName>Users role in the app tenant (admin or member)</DisplayName>
+        <DataType>string</DataType>
+        <UserHelpText>User role in the application tenant.</UserHelpText>
+        <UserInputType>Readonly</UserInputType>
+      </ClaimType>               
     </ClaimsSchema>
 
   </BuildingBlocks>
@@ -128,6 +134,28 @@
           </OutputClaims>
           <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
         </TechnicalProfile>
+        <TechnicalProfile Id="REST-GetUserRole">
+          <DisplayName>Get user role</DisplayName>
+          <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
+          <Metadata>
+            <Item Key="ServiceUrl">https://getuserrole.com</Item>
+            <Item Key="AuthenticationType">None</Item>
+            <Item Key="SendClaimsIn">Body</Item>
+            <Item Key="AllowInsecureAuthInProduction">true</Item>            
+          </Metadata>
+          <!--CryptographicKeys>
+            <Key Id="BasicAuthenticationUsername" StorageReferenceId="B2C_1A_B2cRestClientId" />
+            <Key Id="BasicAuthenticationPassword" StorageReferenceId="B2C_1A_B2cRestClientSecret" />
+          </CryptographicKeys-->
+          <InputClaims>
+            <InputClaim ClaimTypeReferenceId="{pv:tenant}" PartnerClaimType="Name" />
+            <InputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="UserObjectId" />
+          </InputClaims>
+          <OutputClaims>
+            <OutputClaim ClaimTypeReferenceId="appUserRole" PartnerClaimType="role" />
+          </OutputClaims>
+          <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
+        </TechnicalProfile>        
       </TechnicalProfiles>
     </ClaimsProvider>
 
@@ -176,6 +204,38 @@
       </OrchestrationSteps>
       <ClientDefinition ReferenceId="DefaultWeb" />
     </UserJourney>  
+
+
+    <UserJourney Id="SignIn">
+      <OrchestrationSteps>
+   
+        <OrchestrationStep Order="1" Type="CombinedSignInAndSignUp" ContentDefinitionReferenceId="api.signuporsignin">
+          <ClaimsProviderSelections>
+            <ClaimsProviderSelection ValidationClaimsExchangeId="LocalAccountSigninEmailExchange" />
+          </ClaimsProviderSelections>
+          <ClaimsExchanges>
+            <ClaimsExchange Id="LocalAccountSigninEmailExchange" TechnicalProfileReferenceId="SelfAsserted-LocalAccountSignin-Email" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <!-- This step reads any user attributes that we may not have received when in the token. -->
+        <OrchestrationStep Order="3" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="AADUserReadWithObjectId" TechnicalProfileReferenceId="AAD-UserReadUsingObjectId" />
+          </ClaimsExchanges>
+        </OrchestrationStep>
+
+        <OrchestrationStep Order="4" Type="ClaimsExchange">
+          <ClaimsExchanges>
+            <ClaimsExchange Id="GetUserRole" TechnicalProfileReferenceId="REST-GetUserRole" />
+          </ClaimsExchanges>        
+        </OrchestrationStep>
+ 
+        <OrchestrationStep Order="4" Type="SendClaims" CpimIssuerTechnicalProfileReferenceId="JwtIssuer" />
+    
+      </OrchestrationSteps>
+      <ClientDefinition ReferenceId="DefaultWeb" />
+    </UserJourney>    
 	
 	</UserJourneys>
 
