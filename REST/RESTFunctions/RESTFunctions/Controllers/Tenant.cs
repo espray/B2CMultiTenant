@@ -73,7 +73,7 @@ namespace RESTFunctions.Controllers
             {
                 description = tenant.Description,
                 mailNickname = tenant.Name,
-                displayName = tenant.Name,
+                displayName = tenant.Name.ToUpper(),
                 groupTypes = new string[] { },
                 mailEnabled = false,
                 securityEnabled = true,
@@ -129,6 +129,39 @@ namespace RESTFunctions.Controllers
             catch (HttpRequestException ex)
             {
                 return BadRequest("Unable to validate user id");
+            }
+        }
+
+        [HttpGet("{tenantCode}/userRole")]
+        public async Task<IActionResult> GetUserRole(string tenantName, Guid userId)
+        {
+            var http = await _graph.GetClientAsync();
+            try
+            {
+                var json = await http.GetStringAsync($"{Graph.BaseUrl}groups?$filter=(mailNickName eq {tenantName})");
+                var tenants = JObject.Parse(json)["value"].Value<JArray>();
+                string role = null;
+                if (tenants.Count == 1)
+                {
+                    var tenantId = tenants[0]["id"].Value<string>();
+                    json = await http.GetStringAsync($"{Graph.BaseUrl}groups/{tenantId}/owners");
+                    var members = JObject.Parse(json)["value"].Value<JArray>();
+                    var member = members.FirstOrDefault(m => m["id"].Value<string>() == userId.ToString());
+                    if (member != null)
+                        role = "owner";
+                    else
+                    {
+                        json = await http.GetStringAsync($"{Graph.BaseUrl}groups/{tenantId}/members");
+                        members = JObject.Parse(json)["value"].Value<JArray>();
+                        member = members.FirstOrDefault(m => m["id"].Value<string>() == userId.ToString());
+                        if (member != null) role = "member";
+                    }
+                }
+                return new JsonResult(new { role });
+            }
+            catch (HttpRequestException ex)
+            {
+                return BadRequest("Errors processing this request");
             }
         }
 
