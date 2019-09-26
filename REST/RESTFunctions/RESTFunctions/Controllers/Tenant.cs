@@ -53,10 +53,6 @@ namespace RESTFunctions.Controllers
                 return BadRequest("Invalid parameters");
 
             var http = await _graph.GetClientAsync();
-            // does the user exist?
-            Guid guid;
-            if (!Guid.TryParse(tenant.UserObjectId, out guid))
-                return BadRequest("Invalid user id");
             try
             {
                 await http.GetStringAsync($"{Graph.BaseUrl}users/{tenant.UserObjectId}");
@@ -102,14 +98,15 @@ namespace RESTFunctions.Controllers
         [HttpGet("forUser")]
         public async Task<IActionResult> GetForUser(string userId)
         {
-            if ((string.IsNullOrEmpty(userId) || (string.IsNullOrEmpty(userId))))
-                return BadRequest("Invalid parameters");
+            //if ((string.IsNullOrEmpty(userId) || (string.IsNullOrEmpty(userId))))
+            //if (userId == Guid.Empty)
+            //    return BadRequest("Invalid parameters");
 
             var http = await _graph.GetClientAsync();
             // does the user exist?
-            Guid guid;
-            if (!Guid.TryParse(userId, out guid))
-                return BadRequest("Invalid user id");
+            //Guid guid;
+            //if (!Guid.TryParse(userId, out guid))
+            //    return BadRequest("Invalid user id");
             try
             {
                 var json = await http.GetStringAsync($"{Graph.BaseUrl}users/{userId}/memberOf");
@@ -117,6 +114,8 @@ namespace RESTFunctions.Controllers
                 var membership = new List<Member>();
                 foreach (var group in groups)
                 {
+                    var isGroup = group["@odata.type"].Value<string>() == "#microsoft.graph.group";
+                    if (!isGroup) continue;
                     var id = group["id"].Value<string>();
                     json = await http.GetStringAsync($"{Graph.BaseUrl}groups/{id}/owners");
                     var values = JObject.Parse(json)["value"].Value<JArray>();
@@ -136,19 +135,16 @@ namespace RESTFunctions.Controllers
         }
 
         [HttpGet("getUserRole")]
-        public async Task<IActionResult> GetUserRole(string tenantName, Guid userId)
+        public async Task<IActionResult> GetUserRoleByNameAsync(string tenantName, string userId)
         {
             var http = await _graph.GetClientAsync();
             try
             {
-                var json = await http.GetStringAsync($"{Graph.BaseUrl}groups?$filter=(mailNickName eq {tenantName})");
-                var tenants = JObject.Parse(json)["value"].Value<JArray>();
                 string role = null;
-                string tenantId = null;
-                if (tenants.Count == 1)
+                string tenantId = await GetTenantIdFromNameAsync(tenantName);
+                if (!String.IsNullOrEmpty(tenantId))
                 {
-                    tenantId = tenants[0]["id"].Value<string>();
-                    role = await GetUserRole(Guid.Parse(tenantId), userId);
+                    role = await GetUserRoleByIdAsync(tenantId, userId);
                 }
                 return new JsonResult(new { tenantId, role });
             }
@@ -158,16 +154,16 @@ namespace RESTFunctions.Controllers
             }
         }
 
-        private async Task<string> GetUserRole(Guid tenantId, Guid userId)
+        private async Task<string> GetUserRoleByIdAsync(string tenantId, string userId)
         {
             string role = null;
             if (await IsMemberAsync(tenantId, userId, true))
-                role = "owner";
+                role = "admin";
             else if (await IsMemberAsync(tenantId, userId, false))
                 role = "member";
             return role;
         }
-        private async Task<bool> IsMemberAsync(Guid tenantId, Guid userId, bool asAdmin = false)
+        private async Task<bool> IsMemberAsync(string tenantId, string userId, bool asAdmin = false)
         {
             var http = await _graph.GetClientAsync();
             var membType = asAdmin ? "owners" : "members";
@@ -178,8 +174,9 @@ namespace RESTFunctions.Controllers
         }
 
         [HttpPut("add")]
-        public async Task<IActionResult> AddMember([FromBody] Guid tenantId, Guid userId, bool isAdmin = false)
+        public async Task<IActionResult> AddMember([FromBody] string tenantName, string userId, bool isAdmin = false)
         {
+            var tenantId = await GetTenantIdFromNameAsync(tenantName);
             var http = await _graph.GetClientAsync();
             var refs = new List<string>() { "members" };
             if (isAdmin) refs.Add("owners");
@@ -200,7 +197,7 @@ namespace RESTFunctions.Controllers
         }
 
         [HttpGet("{tenantName}/invite")]
-        public async Task<IActionResult> GetInviteToken(string tenantName, string email)
+        public IActionResult GetInviteToken(string tenantName, string email)
         {
             const string issuer = "http://b2cmultitenant";
             const string audience = "https://login.microsoftonline.com/mrochonb2cprod.onmicrosoft.com";
@@ -209,7 +206,7 @@ namespace RESTFunctions.Controllers
             claims.Add(new System.Security.Claims.Claim("appTenantId", tenantName));
             claims.Add(new System.Security.Claims.Claim("email", email));
 
-            var securityKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Encoding.UTF8.GetBytes(ConfigurationManager.AppSettings["ida:ClientSigningKey"]));
+            var securityKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(Encoding.UTF8.GetBytes("secret"));
             var cred = new Microsoft.IdentityModel.Tokens.SigningCredentials(
                 securityKey,
                 SecurityAlgorithms.HmacSha256Signature);
@@ -218,6 +215,19 @@ namespace RESTFunctions.Controllers
             var jwt = jwtHandler.WriteToken(token);
 
             return new ObjectResult(jwt);
+        }
+        private async Task<string> GetTenantIdFromNameAsync(string tenantName)
+        {
+            var http = await _graph.GetClientAsync();
+            var json = await http.GetStringAsync($"{Graph.BaseUrl}groups?$filter=(mailNickName eq {tenantName.ToUpper()})");
+            var tenants = JObject.Parse(json)["value"].Value<JArray>();
+            string tenantId = null;
+            if (tenants.Count == 1)
+            {
+                tenantId = tenants[0]["id"].Value<string>();
+                return tenantId;
+            }
+            return null;
         }
     }
 

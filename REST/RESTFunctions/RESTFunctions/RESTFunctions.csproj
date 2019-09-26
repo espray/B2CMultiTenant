@@ -4,6 +4,7 @@
     <TargetFramework>netcoreapp2.2</TargetFramework>
     <AspNetCoreHostingModel>InProcess</AspNetCoreHostingModel>
     <WebProject_DirectoryAccessLevelKey>0</WebProject_DirectoryAccessLevelKey>
+    <UserSecretsId>192a8004-942c-4d97-88b3-3984a97a3f1a</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
