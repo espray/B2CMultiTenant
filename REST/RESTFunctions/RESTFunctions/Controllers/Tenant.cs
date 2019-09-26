@@ -193,7 +193,7 @@ namespace RESTFunctions.Controllers
                 if (!resp.IsSuccessStatusCode)
                     return BadRequest("Add member failed");
             }
-            return new OkResult();
+            return new JsonResult(new { tenantId, role = isAdmin ? "admin" : "member" });
         }
 
         [HttpGet("{tenantName}/invite")]

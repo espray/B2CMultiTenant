@@ -159,7 +159,7 @@
           <DisplayName>Get user role</DisplayName>
           <Protocol Name="Proprietary" Handler="Web.TPEngine.Providers.RestfulProvider, Web.TPEngine, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" />
           <Metadata>
-            <Item Key="ServiceUrl">https://b2capis.azurewebsites.net/add</Item>
+            <Item Key="ServiceUrl">https://b2capis.azurewebsites.net/tenant/add</Item>
             <Item Key="AuthenticationType">None</Item>
             <Item Key="SendClaimsIn">Body</Item>
             <Item Key="AllowInsecureAuthInProduction">true</Item>            
@@ -173,6 +173,7 @@
             <InputClaim ClaimTypeReferenceId="objectId" PartnerClaimType="userId" />
           </InputClaims>
           <OutputClaims>
+            <OutputClaim ClaimTypeReferenceId="appTenantId" PartnerClaimType="tenantId" />
             <OutputClaim ClaimTypeReferenceId="appTenantRole" DefaultValue="member" AlwaysUseDefaultValue="true"/>
           </OutputClaims>
           <UseTechnicalProfileForSessionManagement ReferenceId="SM-Noop" />
