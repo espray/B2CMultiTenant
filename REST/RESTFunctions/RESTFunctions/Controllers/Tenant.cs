@@ -23,6 +23,7 @@ namespace RESTFunctions.Controllers
             _graph = graph;
         }
         Graph _graph;
+
         [HttpGet]
         public async Task<IActionResult> Get(string id)
         {
@@ -44,7 +45,6 @@ namespace RESTFunctions.Controllers
                 return NotFound();
             }
         }
-
         // POST api/values
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] TenantDef tenant)
