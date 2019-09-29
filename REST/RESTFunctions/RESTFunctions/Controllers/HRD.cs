@@ -18,24 +18,28 @@ namespace RESTFunctions.Controllers
     [ApiController]
     public class HRD : ControllerBase
     {
-        [HttpGet("isAAD")]
+        [HttpGet("getDomain")]
         public IActionResult GetFromUserCode(string userCode)
         {
             try
             {
-                return new JsonResult(new { aadDomain = CodeDomainMapping[userCode] });
+                var aadDomain = CodeDomainMapping[userCode];
+                if (String.IsNullOrEmpty(aadDomain))
+                    return new JsonResult(new { userCode });
+                else
+                    return new JsonResult(new { userCode, aadDomain = CodeDomainMapping[userCode] });
             }
             catch
             {
-                return new OkResult();
+                return new NotFoundResult();
             }
         }
         static Dictionary<string, string> CodeDomainMapping = new Dictionary<string, string>()
         {
             {"jda", "jda.com" },
             {"abc", "microsoft.com" },
-            {"xyz", "meraridom.com" }
+            {"xyz", "meraridom.com" },
+            {"goo", null }
         };
-
     }
 }
